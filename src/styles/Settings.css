@@ -1,0 +1,131 @@
+.settings-container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 16px 16px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.settings-card {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 18px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.settings-title {
+  font-size: 17px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  letter-spacing: -0.3px;
+}
+
+.settings-desc {
+  font-size: 13.5px;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.settings-desc code {
+  background-color: var(--bg-card);
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: monospace;
+  color: var(--accent-gold);
+}
+
+.neon-status-box {
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background-color: rgba(79, 209, 161, 0.1);
+  border: 1px solid rgba(79, 209, 161, 0.3);
+  color: var(--good-green);
+  font-size: 13.5px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  word-break: break-word;
+}
+
+.neon-status-box.error {
+  background-color: rgba(255, 107, 94, 0.1);
+  border-color: rgba(255, 107, 94, 0.3);
+  color: var(--bad-red);
+}
+
+.connection-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.connection-input-group input {
+  width: 100%;
+  font-size: 13.5px;
+  padding: 10px 12px;
+}
+
+.btn-save-neon {
+  background: linear-gradient(135deg, var(--accent-gold), #FF9800);
+  color: #0F2A3A;
+  font-weight: 800;
+  padding: 12px 18px;
+  border-radius: var(--radius-sm);
+  font-size: 14.5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: all 0.15s ease;
+  width: 100%;
+}
+
+.btn-save-neon:active {
+  transform: scale(0.98);
+}
+
+/* 375px Specific Mobile Optimizations */
+@media (max-width: 380px) {
+  .settings-container {
+    padding: 12px 10px 24px;
+    gap: 12px;
+  }
+
+  .settings-card {
+    padding: 14px 12px;
+    gap: 12px;
+  }
+
+  .settings-title {
+    font-size: 16px;
+  }
+
+  .settings-desc {
+    font-size: 12.5px;
+  }
+
+  .neon-status-box {
+    font-size: 12.5px;
+    padding: 10px 12px;
+  }
+
+  .btn-save-neon {
+    font-size: 14px;
+    min-height: 44px;
+    padding: 10px 14px;
+  }
+}

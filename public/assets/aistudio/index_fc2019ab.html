@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Soʻzlar</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      --bg: #0F2A3A;
+      --panel: #17394D;
+      --text: #F4EFE6;
+      --muted: #8FB0C2;
+      --accent: #FFC93C;
+      --good: #4FD1A1;
+      --bad: #FF6B5E;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    #app {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 24px;
+      padding: 24px 20px calc(24px + env(safe-area-inset-bottom, 0px));
+      max-width: 480px;
+      margin: 0 auto;
+    }
+    .center { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+    .streak-number { font-size: 72px; font-weight: 800; color: var(--accent); line-height: 1; }
+    .streak-label { font-size: 16px; color: var(--muted); margin-top: 4px; }
+    h1 { font-size: 30px; margin: 0 0 12px; }
+    p { font-size: 17px; line-height: 1.5; color: var(--muted); margin: 0; }
+    .counter { font-size: 16px; color: var(--muted); }
+    .card { background: var(--panel); border-radius: 20px; padding: 56px 24px; text-align: center; }
+    .card-en { font-size: 40px; font-weight: 800; overflow-wrap: anywhere; }
+    .card-uz { font-size: 24px; color: var(--accent); margin-top: 16px; }
+    button {
+      width: 100%;
+      border: 0;
+      border-radius: 14px;
+      padding: 18px 20px;
+      font-size: 19px;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+    }
+    button:focus-visible { outline: 3px solid var(--text); outline-offset: 2px; }
+    .primary { background: var(--accent); color: var(--bg); font-weight: 800; }
+    .option { background: var(--panel); color: var(--text); text-align: left; margin-bottom: 12px; }
+    .option.good { background: var(--good); color: var(--bg); }
+    .option.bad { background: var(--bad); color: var(--bg); }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <script>
+    var tg = window.Telegram && window.Telegram.WebApp;
+    if (tg) {
+      tg.ready();
+      tg.expand();
+      tg.setHeaderColor('#0F2A3A');
+      tg.setBackgroundColor('#0F2A3A');
+    }
+
+    var app = document.getElementById('app');
+    var data = null;
+    var batch = [];
+    var idx = 0;
+    var queue = [];
+    var options = [];
+    var picked = null;
+    var locked = false;
+    var finalStreak = 0;
+
+    function api(url, method) {
+      return fetch(url, {
+        method: method || 'GET',
+        headers: { 'x-init-data': tg ? tg.initData : '' },
+      }).then(function (res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      });
+    }
+
+    function shuffle(arr) {
+      var a = arr.slice();
+      for (var i = a.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var t = a[i];
+        a[i] = a[j];
+        a[j] = t;
+      }
+      return a;
+    }
+
+    function makeOptions(word) {
+      var others = shuffle(data.pool.filter(function (u) { return u !== word.uz; }));
+      return shuffle([word.uz, others[0], others[1], others[2]]);
+    }
+
+    // ---------- EKRANLAR ----------
+    function showError() {
+      app.innerHTML =
+        '<div class="center"><h1>Ochilmadi</h1>' +
+        '<p>Ilovani Telegramdagi bot orqali oching. Agar oʻsha yerda ham chiqsa, server ishlayotganini tekshiring.</p></div>';
+    }
+
+    function showHome() {
+      var html = '<div><div class="streak-number">' + data.streak + '</div><div class="streak-label">kun ketma-ket</div></div>';
+      if (data.done) {
+        html += '<div class="center"><h1>Bugun bajarildi</h1><p>Ertaga yangi 10 ta soʻz keladi.</p></div><div></div>';
+      } else {
+        html += '<div class="center"><h1>Bugungi 10 ta soʻz</h1><p>Avval oʻrganasiz, keyin test. Hammasi toʻgʻri boʻlmaguncha kun tugamaydi.</p></div>';
+        html += '<button class="primary" onclick="startLearning()">Boshlash</button>';
+      }
+      app.innerHTML = html;
+    }
+
+    function startLearning() {
+      batch = data.batch;
+      idx = 0;
+      showLearn();
+    }
+
+    function showLearn() {
+      var w = batch[idx];
+      var last = idx === batch.length - 1;
+      app.innerHTML =
+        '<div class="counter">' + (idx + 1) + ' / ' + batch.length + '</div>' +
+        '<div class="card"><div class="card-en">' + w.en + '</div><div class="card-uz">' + w.uz + '</div></div>' +
+        '<button class="primary" onclick="' + (last ? 'startQuiz()' : 'nextCard()') + '">' +
+        (last ? 'Testni boshlash' : 'Keyingisi') + '</button>';
+    }
+
+    function nextCard() {
+      idx += 1;
+      showLearn();
+    }
+
+    function startQuiz() {
+      queue = shuffle(batch);
+      options = makeOptions(queue[0]);
+      picked = null;
+      locked = false;
+      showQuiz();
+    }
+
+    function showQuiz() {
+      var current = queue[0];
+      var html = '<div class="counter">Qoldi: ' + queue.length + '</div>';
+      html += '<div class="card"><div class="card-en">' + current.en + '</div></div><div>';
+      options.forEach(function (opt, i) {
+        var cls = 'option';
+        if (picked !== null) {
+          if (opt === current.uz) cls += ' good';
+          else if (opt === picked) cls += ' bad';
+        }
+        html += '<button class="' + cls + '" onclick="answer(' + i + ')">' + opt + '</button>';
+      });
+      html += '</div>';
+      app.innerHTML = html;
+    }
+
+    function answer(i) {
+      if (locked) return;
+      var current = queue[0];
+      var opt = options[i];
+      var correct = opt === current.uz;
+      picked = opt;
+      locked = true;
+      showQuiz();
+      setTimeout(function () {
+        var next = correct ? queue.slice(1) : queue.slice(1).concat([current]);
+        if (next.length === 0) {
+          finishDay();
+          return;
+        }
+        queue = next;
+        options = makeOptions(queue[0]);
+        picked = null;
+        locked = false;
+        showQuiz();
+      }, correct ? 600 : 1500);
+    }
+
+    function finishDay() {
+      api('/api/complete', 'POST')
+        .then(function (r) {
+          finalStreak = r.streak;
+          data.done = true;
+          data.streak = r.streak;
+          showDone();
+        })
+        .catch(showError);
+    }
+
+    function showDone() {
+      app.innerHTML =
+        '<div class="center"><div class="streak-number">' + finalStreak + '</div>' +
+        '<h1>Bugun bajarildi</h1><p>Ketma-ket ' + finalStreak + ' kun. Ertaga ham uzmang.</p></div>' +
+        '<button class="primary" onclick="closeApp()">Yopish</button>';
+    }
+
+    function closeApp() {
+      if (tg) tg.close();
+      else showHome();
+    }
+
+    // ---------- BOSHLANISH ----------
+    api('/api/today')
+      .then(function (d) {
+        data = d;
+        showHome();
+      })
+      .catch(showError);
+  </script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+{
+  "name": "Soʻzlar - Daily English Vocabulary & Neon DB",
+  "description": "Har kuni 10 ta yangi inglizcha soʻz oʻrganing va test topshiring. React.js, Express.js va Neon DB bilan boyitilgan streak tizimi.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
