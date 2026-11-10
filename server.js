@@ -1,3 +1,6 @@
+delete globalThis.__dirname;
+delete global.__dirname;
+
 import express from 'express';
 import fs from 'fs';
 import path from 'path';
@@ -241,7 +244,7 @@ Format JSON exact:
 }`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-flash-latest',
       contents: prompt,
       config: { responseMimeType: 'application/json' },
     });
@@ -264,7 +267,11 @@ async function startServer() {
   if (process.env.NODE_ENV !== 'production') {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+        hmr: false,
+        ws: false,
+      },
       appType: 'custom',
     });
     app.use(vite.middlewares);

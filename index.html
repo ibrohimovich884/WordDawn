@@ -19,6 +19,109 @@
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script>
+      // Vite HMR WebSocket shim and error suppressor for sandboxed iframe environments
+      (function () {
+        // 1. Error suppressor
+        function isWsError(msg) {
+          return typeof msg === 'string' && (
+            msg.includes('WebSocket') ||
+            msg.includes('ws://') ||
+            msg.includes('wss://') ||
+            msg.includes('closed without opened')
+          );
+        }
+
+        window.addEventListener('error', function (event) {
+          if (isWsError(event.message) || (event.error && isWsError(event.error.message))) {
+            event.stopImmediatePropagation();
+            event.preventDefault();
+          }
+        }, true);
+
+        window.addEventListener('unhandledrejection', function (event) {
+          const reason = event.reason;
+          const msg = typeof reason === 'string' ? reason : reason?.message;
+          if (isWsError(msg)) {
+            event.stopImmediatePropagation();
+            event.preventDefault();
+          }
+        }, true);
+
+        // 2. Safe WebSocket shim for Vite client
+        const NativeWebSocket = window.WebSocket;
+        if (!NativeWebSocket) return;
+
+        function MockViteWebSocket(url, protocols) {
+          const isVite =
+            (typeof protocols === 'string' && (protocols === 'vite-hmr' || protocols === 'vite-ping')) ||
+            (Array.isArray(protocols) && (protocols.includes('vite-hmr') || protocols.includes('vite-ping'))) ||
+            (typeof url === 'string' && (url.includes('vite') || url.includes('token=')));
+
+          if (!isVite) {
+            try {
+              return new NativeWebSocket(url, protocols);
+            } catch (_) {
+              // fallback if native fails
+            }
+          }
+
+          const target = new EventTarget();
+          const fake = {
+            CONNECTING: 0,
+            OPEN: 1,
+            CLOSING: 2,
+            CLOSED: 3,
+            readyState: 1,
+            url: String(url),
+            protocol: Array.isArray(protocols) ? protocols[0] : (protocols || ''),
+            extensions: '',
+            bufferedAmount: 0,
+            binaryType: 'blob',
+            send: function () {},
+            close: function (code, reason) {
+              fake.readyState = 3;
+              const ev = new CloseEvent('close', { code: code || 1000, reason: reason || '', wasClean: true });
+              target.dispatchEvent(ev);
+              if (typeof fake.onclose === 'function') fake.onclose(ev);
+            },
+            addEventListener: target.addEventListener.bind(target),
+            removeEventListener: target.removeEventListener.bind(target),
+            dispatchEvent: target.dispatchEvent.bind(target),
+          };
+
+          ['open', 'message', 'error', 'close'].forEach(function (type) {
+            Object.defineProperty(fake, 'on' + type, {
+              get: function () { return fake['_' + type] || null; },
+              set: function (fn) {
+                if (fake['_' + type]) target.removeEventListener(type, fake['_' + type]);
+                fake['_' + type] = fn;
+                if (typeof fn === 'function') target.addEventListener(type, fn);
+              },
+            });
+          });
+
+          // Dispatch simulated open on next tick so hasOpened becomes true
+          setTimeout(function () {
+            if (fake.readyState === 1) {
+              const openEv = new Event('open');
+              target.dispatchEvent(openEv);
+              if (typeof fake.onopen === 'function') fake.onopen(openEv);
+            }
+          }, 0);
+
+          return fake;
+        }
+
+        MockViteWebSocket.CONNECTING = 0;
+        MockViteWebSocket.OPEN = 1;
+        MockViteWebSocket.CLOSING = 2;
+        MockViteWebSocket.CLOSED = 3;
+        MockViteWebSocket.prototype = NativeWebSocket.prototype;
+
+        window.WebSocket = MockViteWebSocket;
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

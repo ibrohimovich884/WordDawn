@@ -1,3 +1,6 @@
+delete globalThis.__dirname;
+delete global.__dirname;
+
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
@@ -114,8 +117,9 @@ export default defineConfig(() => {
       },
     },
     server: {
-      hmr: process.env.DISABLE_HMR !== 'true',
-      watch: process.env.DISABLE_HMR === 'true' ? null : {},
+      hmr: false,
+      ws: false,
+      watch: null,
     },
   };
 });
